@@ -2,18 +2,20 @@
 -- Copyright (c) 2026 K. S. Ernest (iFire) Lee
 --
 -- Formal model of GEPA (Genetic Evolutionary Prompt Adaptation).
--- Two implementations exist with different algorithmic designs:
 --
---   § 1–5  dspy-go (XiaoConstantine/dspy-go)
---          Multi-objective 7-dim Pareto fitness, explicit Pareto archive,
---          crowding-distance diversity trimming.
---          Sources: pkg/core/optimizer/gepa.go, pkg/core/types.go
+-- Implementation: Stanford dspy via dspex (hex.pm/packages/dspex).
+-- Agrawal et al., "GEPA: Reflective Prompt Evolution Can Outperform
+-- Reinforcement Learning", ICLR 2026 (arXiv:2507.19457).
+-- Elixir entry point: Taskweft.GEPA.Compiler.compile/3
+--                     wraps Dspy.Teleprompt.GEPA.compile!
 --
---   § 6–8  Stanford dspy (stanfordnlp/dspy)
---          Single scalar score, reflective mutation (collect feedback from
---          failed traces → LM proposes new instructions per predictor),
---          best-score selection with round-monotonicity guarantee.
---          Sources: dspy/teleprompt/gepa/gepa.py, gepa_utils.py
+-- §§ 1–5 model the multi-objective Pareto dominance structure used
+-- internally by GEPA for instance-level diversity (candidate_selection_strategy
+-- = "pareto").  The 7-dim Fitness structure maps to dspy-go's GEPACandidate
+-- for reference; the production variant uses a single scalar per task.
+--
+-- §§ 6–8 model the round-monotonicity and selection correctness guarantees
+-- of the outer optimization loop (evolve/reflect single-round API).
 
 import Mathlib.Data.List.Basic
 import Mathlib.Data.Finset.Basic
