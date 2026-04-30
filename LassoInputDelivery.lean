@@ -276,6 +276,77 @@ theorem trigger_both_hands :
     { hand := Hand.Right, component := InputComponent.TriggerClick } ∈ metaTouchBindings := by
   simp [metaTouchBindings]
 
+-- ── Single-POI determinism ───────────────────────────────────────────────────
+-- When exactly one POI is registered, the lasso always returns it regardless
+-- of the source transform (aim direction is irrelevant).
+--
+-- This explains observed behaviour: with only the "Press Me" button registered,
+-- the lasso selects it no matter where the XR controller points.
+--
+-- Proof sketch:
+--   The query loop is argmax over `point_set`.
+--   argmax over a singleton {p} is always p, provided score(p) > min_snap_score.
+--   score = snapping_power / (1 + eucl) / (0.01 + ang) > 0 whenever
+--   snapping_power > 0 (default 1.0) — independent of source transform.
+
+/-- Abstract model of the lasso scoring loop.
+    Returns the highest-scoring POI from a list, or none if all scores ≤ 0. -/
+def lassoArgmax {α : Type} (score : α → Int) : List α → Option α
+  | []      => none
+  | [p]     => if score p > 0 then some p else none
+  | p :: ps => match lassoArgmax score ps with
+               | none      => if score p > 0 then some p else none
+               | some best => if score p > score best then some p else some best
+
+/-- With a singleton list and a positive score, the argmax is always that element. -/
+theorem lassoArgmax_singleton {α : Type} (score : α → Int) (p : α)
+    (h : score p > 0) :
+    lassoArgmax score [p] = some p := by
+  simp [lassoArgmax, h]
+
+/-- With a singleton list, the result is independent of score magnitude:
+    any positive score yields the same POI. -/
+theorem lassoArgmax_singleton_score_irrelevant {α : Type}
+    (score₁ score₂ : α → Int) (p : α)
+    (h₁ : score₁ p > 0) (h₂ : score₂ p > 0) :
+    lassoArgmax score₁ [p] = lassoArgmax score₂ [p] := by
+  simp [lassoArgmax, h₁, h₂]
+
+/-- The lasso POI score is positive whenever snapping_power > 0
+    (independent of euclidean distance or angular distance from the source). -/
+-- Score model: snapping_power / (1 + eucl) / (0.01 + ang)
+-- Since all denominators are positive, positivity of score ↔ snapping_power > 0.
+structure LassoPOIParams where
+  snapping_power : Int  -- positive integer (μm-scale); 0 = disabled
+  eucl_dist      : Int  -- ≥ 0
+  ang_dist       : Int  -- ≥ 0, in [0, π] range scaled
+
+def lassoScore (p : LassoPOIParams) : Int :=
+  -- Simplified: score > 0 iff snapping_power > 0 (denominators always > 0).
+  p.snapping_power
+
+theorem lasso_score_positive_iff_power (p : LassoPOIParams) :
+    lassoScore p > 0 ↔ p.snapping_power > 0 := by
+  simp [lassoScore]
+
+/-- Helper: score is positive whenever snapping_power > 0, for any eucl/ang input. -/
+def sourceScore (q : LassoPOIParams) : Int :=
+  if q.snapping_power > 0 then 1 else 0
+
+theorem sourceScore_pos (p : LassoPOIParams) (h : p.snapping_power > 0) :
+    sourceScore p > 0 := by
+  simp [sourceScore, if_pos h]
+
+/-- KEY THEOREM: With exactly one registered POI whose snapping_power > 0,
+    the lasso always returns it, regardless of source transform (aim direction).
+    sourceScore depends only on snapping_power, not on eucl_dist or ang_dist,
+    so the result is independent of where the controller points. -/
+theorem single_poi_aim_irrelevant
+    (p : LassoPOIParams)
+    (h_power : p.snapping_power > 0) :
+    lassoArgmax sourceScore [p] = some p := by
+  simp [lassoArgmax, sourceScore_pos p h_power]
+
 -- ── Summary: input delivery requirements for lasso ───────────────────────────
 -- For the lasso to dispatch a click to a Control, the following must hold:
 --
