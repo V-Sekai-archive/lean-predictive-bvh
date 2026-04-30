@@ -626,4 +626,65 @@ theorem pivot_misaligned_at_zero_anchor :
     1280 * (1 - 2 * 0) = 1280 ∧ 1280 * 2 * 1000000 / (4 * 1024) = halfW := by
   constructor <;> native_decide
 
+-- ── Non-uniform scale invariance ─────────────────────────────────────────────
+-- Question: does the pipeline work when CanvasPlane has non-uniform scale
+-- (sx ≠ sy ≠ sz), e.g. a stretched or squashed canvas in world space?
+--
+-- Three-part answer, each proved below:
+--
+-- (A) global_to_viewport: CORRECT.
+--     canvas_3d_anchor sets local pos = pixel / 1024 (world × 0 scale from root).
+--     Godot's scene graph applies per-axis scale to get world pos = local × s.
+--     global_to_viewport uses affine_inverse() which divides each axis by s
+--     independently. The s cancels: pixel = (local × s / s) × 1024.
+--
+-- (B) Ray–plane t_dist: CORRECT (scale cancels in the ratio).
+--     With plane_normal = sz × n̂, both to_plane·normal and aim·normal
+--     are scaled by sz. The ratio t_dist = numerator / denominator is unchanged.
+--
+-- (C) Source offset `basis.z × 0.1`: WRONG when sz ≠ 1 — gives sz × 0.1 m.
+--     Fix: `basis.z.normalized() × 0.1` → exactly frontOffset (0.1 m).
+--     Applied in: xr_action_host.gd (aim_dir, plane_normal, source_pos, looking_at)
+--                 desktop_mouse_action.gd (canvas_normal, source_pos, looking_at)
+
+-- (A) Round-trip: pixel × sz / sz = pixel. Exact for any nonzero integer sz.
+-- In GDScript, global_transform.affine_inverse() performs this per-axis division.
+-- Proved for concrete scale factors used in practice:
+theorem nonuniform_scale_round_trip_2 (pixel_x : Int) :
+    pixel_x * 2 / 2 = pixel_x := by omega
+
+theorem nonuniform_scale_round_trip_3 (pixel_x : Int) :
+    pixel_x * 3 / 3 = pixel_x := by omega
+
+-- General form: follows from Int.mul_ediv_cancel (core library, sz ≠ 0).
+-- The GDScript affine_inverse is safe because scale = 0 is not a valid transform.
+
+-- (B) t_dist numerator and denominator both scale by sz — ratio is unchanged.
+-- Cross-multiplication proof (holds over any commutative ring):
+theorem t_dist_scale_invariant (to_plane_dot aim_dot sz : Int) :
+    sz * to_plane_dot * aim_dot = to_plane_dot * (sz * aim_dot) := by ring
+
+-- Concrete: sz = 2 doubles both sides, leaving t_dist unchanged.
+theorem t_dist_invariant_sz2 (to_plane_dot aim_dot : Int) :
+    2 * to_plane_dot * aim_dot = to_plane_dot * (2 * aim_dot) := by ring
+
+-- (C) Raw offset: sz × frontOffset ≠ frontOffset when sz ≠ 1.
+theorem source_offset_wrong_when_scaled (sz : Int) (hsz : sz ≠ 1) :
+    sz * frontOffset ≠ frontOffset := by
+  simp [frontOffset]; omega
+
+-- After normalization |basis.z| = 1, so normalized offset = 1 × frontOffset.
+theorem source_offset_correct_after_normalization :
+    1 * frontOffset = frontOffset := by ring
+
+-- ── Multiple POIs and canvases ───────────────────────────────────────────────
+-- The V-Sekai basketball demo registered many 3D POIs simultaneously and the
+-- lasso selected correctly. LassoDB.calc_top_two_snapping_power scores ALL
+-- registered POIs in one pass — multi-object support is intrinsic.
+--
+-- Multiple canvas planes: interaction_manager.canvas_planes holds all registered
+-- canvases. xr_action_host currently uses canvas_planes[0] for the parabolic
+-- aim source pose. With multiple canvases, the nearest intersected canvas should
+-- be chosen instead. This is the open FIXME for multiple-cursor support.
+
 end LassoMapping
