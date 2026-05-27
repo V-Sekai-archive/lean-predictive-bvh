@@ -10,6 +10,10 @@ package «optimal-partition» where
 require «truth_research_zk» from git
   "https://github.com/V-Sekai-fire/truth_research_zk.git" @ "add-i64-r128-emitters-fix-mapscalar"
 
+require LeanSlang from git
+  "https://github.com/V-Sekai-fire/lean-slang.git" @ "v0.0.5"
+
+
 lean_lib «PredictiveBVH» where
   roots := #[`PredictiveBVH]
 

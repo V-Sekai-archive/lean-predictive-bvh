@@ -28,6 +28,7 @@ import PredictiveBVH.Codegen.RingOps
 import PredictiveBVH.Spatial.BucketDir
 import PredictiveBVH.Spatial.HilbertCell
 import PredictiveBVH.Spatial.SphericalPolygon
+import PredictiveBVH.Spatial.KusudamaShader
 
 -- Code generation pipeline
 import PredictiveBVH.Codegen.QuinticHermite
