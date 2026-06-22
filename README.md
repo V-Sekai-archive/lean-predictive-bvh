@@ -1,5 +1,18 @@
 # predictive_bvh
 
+> [!WARNING]
+> **Archived.** This monorepo has been split into one repo per hexagon cluster.
+> Development continues in the repos below; this repo is read-only.
+>
+> | Cluster | Repo |
+> |---|---|
+> | Shared primitive types | [`lean-shared-core`](https://github.com/v-sekai-multiplayer-fabric/lean-shared-core) |
+> | NoGod / ReBAC authorization | [`lean-rebac-core`](https://github.com/v-sekai-multiplayer-fabric/lean-rebac-core) |
+> | Humanoid ROM / IK constraints | [`lean-humanoid-rom`](https://github.com/v-sekai-multiplayer-fabric/lean-humanoid-rom) |
+> | Predictive spatial oracle (ghost expansion + SAH + `bvh-codegen`) | [`lean-spatial-oracle`](https://github.com/v-sekai-multiplayer-fabric/lean-spatial-oracle) |
+> | Fabric networking / SLA | [`lean-fabric-protocol`](https://github.com/v-sekai-multiplayer-fabric/lean-fabric-protocol) |
+> | Authority-interest / solve-order | [`lean-interest-mgmt`](https://github.com/v-sekai-multiplayer-fabric/lean-interest-mgmt) |
+
 Lean 4 formal verification and code generation for the spatial oracle used by `multiplayer_fabric`. The output is a single C header (`predictive_bvh.h`) that the production module includes.
 
 ## The problem this solves
