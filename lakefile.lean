@@ -8,30 +8,57 @@ package «optimal-partition» where
 
 -- Dependency for flat ECS-style E-node and E-class storage patterns
 require «truth_research_zk» from git
-  "https://github.com/V-Sekai-fire/truth_research_zk.git" @ "add-i64-r128-emitters-fix-mapscalar"
+  "https://github.com/V-Sekai-fire/truth_research_zk.git" @ "mathlib-v4.30"
 
 require LeanSlang from git
-  "https://github.com/V-Sekai-fire/lean-slang.git" @ "v0.0.5"
+  "https://github.com/V-Sekai-fire/lean-slang.git" @ "mathlib-v4.30"
 
+-- ── Hexagon clusters (core/ports/adapters per the hexagonal convention) ───────
+-- Each cluster is a lean_lib rooted at its aggregator file (e.g. PredictiveBvh.lean),
+-- which imports that cluster's PRODUCTION module closure. `globs := #[.one ...]`
+-- keeps the lib to that closure so research-tier modules (in Research.lean) are
+-- not pulled in by submodule globbing. The old monolithic `PredictiveBVH` library
+-- was split into these along the dependency seams.
 
-lean_lib «PredictiveBVH» where
-  roots := #[`PredictiveBVH]
+-- Shared primitive types (the common vocabulary every core builds on).
+lean_lib Shared where
+  roots := #[`Shared]
+  globs := #[.one `Shared]
 
-lean_lib Lasso where
-  roots := #[`Lasso.Mapping, `Lasso.InputDelivery]
+-- The predictive spatial-oracle hexagon (ghost expansion + SAH + broadphase).
+lean_lib PredictiveBvh where
+  roots := #[`PredictiveBvh]
+  globs := #[.one `PredictiveBvh]
 
-lean_lib WorkQueue where
-  roots := #[`WorkQueue.Reachability]
+-- Humanoid range-of-motion / IK-constraint hexagon.
+lean_lib HumanoidRom where
+  roots := #[`HumanoidRom]
+  globs := #[.one `HumanoidRom]
 
--- Research-tier proofs (Spatial.{Partition, Tree, RefitIncremental},
--- Protocol.{Saturate, Fabric}, Interest.AuthorityInterest,
--- Relativistic.ReBAC). Module sources live under `PredictiveBVH/` alongside
--- production files; this aggregator pins the research-tier import closure.
-lean_lib «PredictiveBVHResearch» where
-  roots := #[`PredictiveBVHResearch]
+-- Fabric networking / SLA hexagon.
+lean_lib FabricProtocol where
+  roots := #[`FabricProtocol]
+  globs := #[.one `FabricProtocol]
 
--- AmoLean C code generator: writes thirdparty/predictive_bvh/predictive_bvh.h
+-- Authority-interest / solve-order hexagon.
+lean_lib InterestManagement where
+  roots := #[`InterestManagement]
+  globs := #[.one `InterestManagement]
+
+-- Relationship-based access-control hexagon (NoGod / ReBAC).
+lean_lib Rebac where
+  roots := #[`Rebac]
+  globs := #[.one `Rebac]
+
+-- Research-tier proofs across the clusters (aspirational / model-level). NOT on
+-- the CI gate; some are currently broken against the pinned toolchain.
+lean_lib Research where
+  roots := #[`Research]
+  globs := #[.one `Research]
+
+-- AmoLean C code generator: writes thirdparty/predictive_bvh/predictive_bvh.h.
+-- Lives in the predictive-bvh adapters layer (a driven C-header sink).
 @[default_target]
 lean_exe «bvh-codegen» where
-  root := `PredictiveBVH.Codegen.CodeGen
+  root := `PredictiveBvh.adapters.CodeGen
   supportInterpreter := true
